@@ -1,98 +1,219 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import React, { useState } from 'react';
+import { 
+  StyleSheet, 
+  Alert, 
+  TextInput, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  View, 
+  KeyboardAvoidingView,
+  Platform,
+  Image
+} from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { ThemedText } from '@/components/themed-text';
+import { useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function HomeScreen() {
+export default function LoginScreen() {
+  const [studentId, setStudentId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  // 🔹 Fingerprint Login Handler
+  const handleFingerprintLogin = async () => {
+    if (!studentId.trim()) {
+      Alert.alert('Missing Info', 'Please enter your Student ID.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+
+      if (!compatible || !enrolled) {
+        Alert.alert('Unavailable', 'Fingerprint authentication not available on this device.');
+        setLoading(false);
+        return;
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to access voting system',
+      });
+
+      if (result.success) {
+        Alert.alert('Login Successful', `Welcome, ${studentId}`);
+        router.push('/home');
+      } else {
+        Alert.alert('Authentication Failed', 'Fingerprint did not match.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔹 Manual Login Handler
+  const handleManualLogin = () => {
+    if (!studentId.trim()) {
+      Alert.alert('Missing Info', 'Please enter your Student ID.');
+      return;
+    }
+    Alert.alert('Login Successful', `Welcome, ${studentId}`);
+    router.push('/home');
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <ThemedView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.content}
+      >
+        {/* 🔹 Logo + Title Section */}
+        <View style={styles.logoContainer}>
+          {/* <Image 
+            source={{ uri: 'https://cdn-icons-png.flaticon.com/512/8371/8371769.png' }} 
+            style={styles.logo}
+          /> */}
+          <ThemedText type="title" style={styles.title}>
+            FUEZ Smart Voting
+          </ThemedText>
+        </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+        {/* 🔹 Login Form */}
+        <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter Student ID"
+            placeholderTextColor="#807878ff"
+            value={studentId}
+            onChangeText={setStudentId}
+          />
+
+          {/* 🔸 Manual Login Button */}
+          <TouchableOpacity
+            style={[styles.button, styles.manualButton]}
+            onPress={handleManualLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <View style={styles.buttonContent}>
+                <MaterialCommunityIcons name="account" size={22} color="#fff" />
+                <ThemedText style={styles.buttonText}>Login</ThemedText>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* 🔸 Biometric Login Button */}
+          <TouchableOpacity
+            style={[styles.button, styles.fingerprintButton]}
+            onPress={handleFingerprintLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <View style={styles.buttonContent}>
+                <ThemedText style={styles.buttonText}>Fingerprint login</ThemedText>
+                <MaterialCommunityIcons name="fingerprint" size={24} color="#fff" />
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* 🔹 Footer */}
+        <ThemedText style={styles.footerText}>
+          © {new Date().getFullYear()} FUEZ Student Election
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      </KeyboardAvoidingView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#f8faff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  content: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    alignItems: 'center',
+    color: '#00aa55',
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#555',
+    marginTop: 4,
+  },
+  form: {
+    width: '100%',
+    gap: 14,
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    fontSize: 16,
+    color: '#333',
+    elevation: 1,
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
+  manualButton: {
+    backgroundColor: '#00aa55',
+    shadowColor: '#fff',
+  },
+  fingerprintButton: {
+    backgroundColor: '#00aa55',
+    shadowColor: '#ffF',
+  },
+  buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  buttonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  footerText: {
+    marginTop: 40,
+    color: '#777',
+    fontSize: 12,
   },
 });
