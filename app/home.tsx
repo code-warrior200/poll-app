@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { router } from 'expo-router';
 
 // 🗳️ Extended Dummy Data (with 20+ candidates)
 const mockData = [
@@ -21,6 +22,8 @@ const mockData = [
     candidates: [
       { id: '1', name: 'John Doe', dept: 'Computer Science', image: 'https://randomuser.me/api/portraits/men/1.jpg' },
       { id: '2', name: 'Aisha Bello', dept: 'Business Admin', image: 'https://randomuser.me/api/portraits/women/2.jpg' },
+      { id: '27', name: 'Chike Nwankwo', dept: 'Linguistics', image: 'https://randomuser.me/api/portraits/men/27.jpg' },
+      { id: '28', name: 'Amina Sule', dept: 'Public Relations', image: 'https://randomuser.me/api/portraits/women/28.jpg' },
     ],
   },
   {
@@ -28,6 +31,54 @@ const mockData = [
     candidates: [
       { id: '3', name: 'Michael Okoro', dept: 'Engineering', image: 'https://randomuser.me/api/portraits/men/3.jpg' },
       { id: '4', name: 'Chiamaka Uche', dept: 'Mass Communication', image: 'https://randomuser.me/api/portraits/women/4.jpg' },
+      { id: '23', name: 'Zainab Hassan', dept: 'Econometrics', image: 'https://randomuser.me/api/portraits/women/23.jpg' },
+      { id: '24', name: 'Taiwo Fagbo', dept: 'Accounting', image: 'https://randomuser.me/api/portraits/men/24.jpg' },
+    ],
+  },
+  {
+    position: 'Secretary General',
+    candidates: [
+      { id: '5', name: 'Tolu Ade', dept: 'Political Science', image: 'https://randomuser.me/api/portraits/men/5.jpg' },
+      { id: '6', name: 'Grace Yusuf', dept: 'Accounting', image: 'https://randomuser.me/api/portraits/women/6.jpg' },
+      { id: '15', name: 'Samuel Adegoke', dept: 'History', image: 'https://randomuser.me/api/portraits/men/15.jpg' },
+      { id: '16', name: 'Blessing Olatunji', dept: 'Public Admin', image: 'https://randomuser.me/api/portraits/women/16.jpg' },
+      { id: '17', name: 'Kingsley Nwosu', dept: 'Philosophy', image: 'https://randomuser.me/api/portraits/men/17.jpg' },
+    ],
+  },
+  {
+    position: 'Financial Secretary',
+    candidates: [
+      { id: '7', name: 'Emeka Ojo', dept: 'Economics', image: 'https://randomuser.me/api/portraits/men/7.jpg' },
+      { id: '8', name: 'Hauwa Ali', dept: 'Mathematics', image: 'https://randomuser.me/api/portraits/women/8.jpg' },
+      { id: '20', name: 'David Umeh', dept: 'Finance', image: 'https://randomuser.me/api/portraits/men/20.jpg' },
+      { id: '21', name: 'Rita Eze', dept: 'Banking & Finance', image: 'https://randomuser.me/api/portraits/women/21.jpg' },
+      { id: '22', name: 'Olumide Balogun', dept: 'Business Management', image: 'https://randomuser.me/api/portraits/men/22.jpg' },
+    ],
+  },
+  {
+    position: 'Public Relations Officer',
+    candidates: [
+      { id: '9', name: 'Uche Nnamdi', dept: 'Marketing', image: 'https://randomuser.me/api/portraits/men/9.jpg' },
+      { id: '10', name: 'Sade Adamu', dept: 'Mass Communication', image: 'https://randomuser.me/api/portraits/women/10.jpg' },
+      { id: '25', name: 'Bashir Mohammed', dept: 'Media Studies', image: 'https://randomuser.me/api/portraits/men/25.jpg' },
+      { id: '26', name: 'Titi Ogunleye', dept: 'English', image: 'https://randomuser.me/api/portraits/women/26.jpg' },
+      { id: '29', name: 'Peter Ibeh', dept: 'Advertising', image: 'https://randomuser.me/api/portraits/men/29.jpg' },
+    ],
+  },
+  {
+    position: 'Welfare Director',
+    candidates: [
+      { id: '11', name: 'Bayo Femi', dept: 'Sociology', image: 'https://randomuser.me/api/portraits/men/11.jpg' },
+      { id: '12', name: 'Ngozi Ike', dept: 'Psychology', image: 'https://randomuser.me/api/portraits/women/12.jpg' },
+       { id: '18', name: 'Maryam Abdullahi', dept: 'Linguistics', image: 'https://randomuser.me/api/portraits/women/18.jpg' },
+      { id: '19', name: 'Ibrahim Musa', dept: 'Geography', image: 'https://randomuser.me/api/portraits/men/19.jpg' },
+    ],
+  },
+  {
+    position: 'Sports Director',
+    candidates: [
+      { id: '13', name: 'Ifeanyi Chukwu', dept: 'Human Kinetics', image: 'https://randomuser.me/api/portraits/men/13.jpg' },
+      { id: '14', name: 'Amina Lawal', dept: 'Physical Education', image: 'https://randomuser.me/api/portraits/women/14.jpg' },
     ],
   },
 ];
@@ -39,10 +90,6 @@ export default function VoteScreen() {
   const [showCheck, setShowCheck] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [showSummary, setShowSummary] = useState(false);
-
-  // ✨ New animated values for category transitions
-  const fadeCategory = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(0)).current;
 
   const totalCategories = mockData.length;
   const isLastCategory = currentIndex === totalCategories - 1;
@@ -59,46 +106,21 @@ export default function VoteScreen() {
         setTimeout(() => {
           Animated.timing(fadeAnim, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
             setShowCheck(false);
-
-            // 🌟 Animate transition between categories
-            Animated.parallel([
-              Animated.timing(fadeCategory, {
-                toValue: 0,
-                duration: 300,
-                useNativeDriver: true,
-              }),
-              Animated.timing(slideAnim, {
-                toValue: -20,
-                duration: 300,
-                useNativeDriver: true,
-              }),
-            ]).start(() => {
-              if (!isLastCategory) {
-                setCurrentIndex((prev) => prev + 1);
-              } else {
-                setShowSummary(true);
-              }
-
-              // reset + animate in
-              slideAnim.setValue(20);
-              Animated.parallel([
-                Animated.timing(fadeCategory, {
-                  toValue: 1,
-                  duration: 300,
-                  useNativeDriver: true,
-                }),
-                Animated.timing(slideAnim, {
-                  toValue: 0,
-                  duration: 300,
-                  useNativeDriver: true,
-                }),
-              ]).start();
-            });
+            if (!isLastCategory) setCurrentIndex((prev) => prev + 1);
+            else setShowSummary(true);
           });
         }, 1500);
       });
     }, 1000);
   };
+
+    const handleLogout = () => {
+    // Optionally clear votes or session data here
+    setSelectedVotes({});
+    setShowCheck(false);
+    router.replace('/'); // 👈 Redirect to login or home screen
+  };
+
 
   const handleSelect = (id: string) => {
     setSelectedVotes((prev) => ({
@@ -118,60 +140,51 @@ export default function VoteScreen() {
 
   if (showSummary) {
     return (
-      <Animated.View
-        style={{
-          flex: 1,
-          opacity: fadeCategory,
-          transform: [{ translateY: slideAnim }],
-        }}
-      >
-        <ThemedView style={styles.container}>
-          <ThemedText type="title" style={styles.header}>
-            Voting Summary
-          </ThemedText>
-
-          <ScrollView showsVerticalScrollIndicator={true}>
-            {mockData.map((category) => {
-              const candidate = category.candidates.find((c) => c.id === selectedVotes[category.position]);
-              return (
-                <View key={category.position} style={styles.summaryCard}>
-                  <ThemedText style={styles.positionText}>{category.position}</ThemedText>
-                  {candidate ? (
-                    <View style={styles.summaryRow}>
-                      <Image source={{ uri: candidate.image }} style={styles.summaryAvatar} />
-                      <View style={{ flex: 1 }}>
-                        <ThemedText style={styles.name}>{candidate.name}</ThemedText>
-                        <ThemedText style={styles.dept}>{candidate.dept}</ThemedText>
-                      </View>
+      <ThemedView style={styles.container}>
+        <ThemedText type="title" style={styles.header}>Voting Summary</ThemedText>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {mockData.map((category) => {
+            const candidate = category.candidates.find((c) => c.id === selectedVotes[category.position]);
+            return (
+              <View key={category.position} style={styles.summaryCard}>
+                <ThemedText style={styles.positionText}>{category.position}</ThemedText>
+                {candidate ? (
+                  <View style={styles.summaryRow}>
+                    <Image source={{ uri: candidate.image }} style={styles.summaryAvatar} />
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={styles.name}>{candidate.name}</ThemedText>
+                      <ThemedText style={styles.dept}>{candidate.dept}</ThemedText>
                     </View>
-                  ) : (
-                    <ThemedText style={{ color: '#999', marginTop: 8 }}>No candidate selected</ThemedText>
-                  )}
-                </View>
-              );
-            })}
-          </ScrollView>
+                  </View>
+                ) : (
+                  <ThemedText style={{ color: '#999', marginTop: 8 }}>No candidate selected</ThemedText>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
 
-          <TouchableOpacity
-            style={[styles.voteButton, { backgroundColor: '#00aa55' }]}
-            onPress={handleFinalSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <ThemedText style={styles.voteText}>Submit All Votes</ThemedText>
-            )}
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.voteButton, { backgroundColor: '#00aa55' }]}
+          onPress={handleFinalSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? <ActivityIndicator size="small" color="#fff" /> : <ThemedText style={styles.voteText}>Submit All Votes</ThemedText>}
+        </TouchableOpacity>
 
-          {showCheck && (
-            <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-              <Ionicons name="checkmark-circle" size={90} color="#00aa55" />
-              <ThemedText style={styles.successText}>All Votes Submitted!</ThemedText>
-            </Animated.View>
-          )}
-        </ThemedView>
-      </Animated.View>
+        {showCheck && (
+          <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+            <Ionicons name="checkmark-circle" size={90} color="#00aa55" />
+            <ThemedText style={styles.successText}>All Votes Submitted!</ThemedText>
+
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
+              <ThemedText style={styles.logoutText}>Logout</ThemedText>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+      </ThemedView>
     );
   }
 
@@ -196,39 +209,24 @@ export default function VoteScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Animated.View
-        style={{
-          opacity: fadeCategory,
-          transform: [{ translateY: slideAnim }],
-          flex: 1,
-        }}
-      >
-        <FlatList
-          data={currentCategory.candidates}
-          keyExtractor={(item) => item.id}
-          renderItem={renderCandidate}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <>
-              <View style={styles.progressContainer}>
-                <ThemedText style={styles.progressText}>
-                  {currentIndex + 1} of {totalCategories} positions
-                </ThemedText>
-              </View>
-              <ThemedText type="title" style={styles.header}>
-                {currentCategory.position}
-              </ThemedText>
-            </>
-          }
-          contentContainerStyle={{ paddingBottom: 120 }}
-        />
-      </Animated.View>
+      <View style={styles.progressContainer}>
+        <ThemedText style={styles.progressText}>
+          {currentIndex + 1} of {totalCategories} positions
+        </ThemedText>
+      </View>
+
+      <ThemedText type="title" style={styles.header}>{currentCategory.position}</ThemedText>
+
+      <FlatList
+        data={currentCategory.candidates}
+        keyExtractor={(item) => item.id}
+        renderItem={renderCandidate}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      />
 
       <TouchableOpacity
-        style={[
-          styles.voteButton,
-          (!selectedVotes[currentCategory.position] || isSubmitting) && { backgroundColor: '#ccc' },
-        ]}
+        style={[styles.voteButton, (!selectedVotes[currentCategory.position] || isSubmitting) && { backgroundColor: '#ccc' }]}
         disabled={!selectedVotes[currentCategory.position] || isSubmitting}
         onPress={handleVote}
       >
@@ -257,16 +255,9 @@ const styles = StyleSheet.create({
   progressText: { fontSize: 14, color: '#666' },
   header: { textAlign: 'center', fontSize: 24, fontWeight: '700', marginBottom: 16, color: '#1a1a1a' },
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    marginVertical: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    borderRadius: 16, padding: 14, marginVertical: 8, elevation: 2,
+    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4,
   },
   selectedCard: { borderWidth: 2, borderColor: '#00aa55', shadowColor: '#00aa55', shadowOpacity: 0.15 },
   avatar: { width: 54, height: 54, borderRadius: 27, marginRight: 14 },
@@ -274,15 +265,9 @@ const styles = StyleSheet.create({
   name: { fontSize: 17, fontWeight: '600', color: '#111' },
   dept: { fontSize: 14, color: '#666' },
   voteButton: {
-    position: 'absolute',
-    bottom: 30,
-    left: 20,
-    right: 20,
-    backgroundColor: '#00aa55',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    elevation: 3,
+    position: 'absolute', bottom: 30, left: 20, right: 20,
+    backgroundColor: '#00aa55', paddingVertical: 16, borderRadius: 12,
+    alignItems: 'center', elevation: 3,
   },
   voteText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   overlay: {
@@ -302,4 +287,20 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   positionText: { fontSize: 16, fontWeight: '700', color: '#00aa55' },
   summaryAvatar: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
+  logoutButton: {
+  flexDirection: 'row',
+  backgroundColor: '#00aa55',
+  paddingVertical: 12,
+  paddingHorizontal: 24,
+  borderRadius: 10,
+  marginTop: 20,
+  alignItems: 'center',
+  justifyContent: 'center',
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
 });
