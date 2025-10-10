@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 // 🗳️ Extended Dummy Data (with 20+ candidates)
 const mockData = [
@@ -114,12 +116,23 @@ export default function VoteScreen() {
     }, 1000);
   };
 
-    const handleLogout = () => {
-    // Optionally clear votes or session data here
-    setSelectedVotes({});
-    setShowCheck(false);
-    router.replace('/'); // 👈 Redirect to login or home screen
+    const handleLogout = async () => {
+    try {
+      // 🧹 Clear all saved user data
+      await AsyncStorage.clear();
+
+      // 🧼 Reset local state
+      setSelectedVotes({});
+      setShowCheck(false);
+
+      // 🚪 Navigate to login or home screen
+      router.replace('/');
+
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
+
 
 
   const handleSelect = (id: string) => {
