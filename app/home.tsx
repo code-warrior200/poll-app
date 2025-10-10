@@ -222,14 +222,12 @@ export default function VoteScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.progressContainer}>
+      <ThemedText type="title" style={styles.header}>{currentCategory.position}</ThemedText>
+       <View style={styles.progressContainer}>
         <ThemedText style={styles.progressText}>
           {currentIndex + 1} of {totalCategories} positions
         </ThemedText>
       </View>
-
-      <ThemedText type="title" style={styles.header}>{currentCategory.position}</ThemedText>
-
       <FlatList
         data={currentCategory.candidates}
         keyExtractor={(item) => item.id}
@@ -266,7 +264,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafc', padding: 20 },
   progressContainer: { alignItems: 'center', marginBottom: 6 },
   progressText: { fontSize: 14, color: '#666' },
-  header: { textAlign: 'center', fontSize: 24, fontWeight: '700', marginBottom: 16, color: '#1a1a1a' },
+  header: { textAlign: 'center', fontSize: 24, fontWeight: '700', marginBottom: 10, marginTop:46, color: '#1a1a1a' },
   card: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
     borderRadius: 16, padding: 14, marginVertical: 8, elevation: 2,
