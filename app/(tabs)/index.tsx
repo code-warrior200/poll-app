@@ -18,11 +18,10 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
-  const [studentId, setStudentId] = useState('');
+  const [regnumber, setRegnumber] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // ✅ Detect environment (local vs. production)
   const API_BASE_URL =
     process.env.EXPO_PUBLIC_API_URL || 'https://fue-vote-backend-1.onrender.com';
 
@@ -35,20 +34,10 @@ export default function LoginScreen() {
     }
   };
 
-  // ✅ Retrieve stored token
-  const getToken = async () => {
-    try {
-      return await SecureStore.getItemAsync('jwt_token');
-    } catch (error) {
-      console.error('Error retrieving token:', error);
-      return null;
-    }
-  };
-
-  // 🔹 Manual Login Handler
-  const handleManualLogin = async () => {
-    if (!studentId.trim()) {
-      Alert.alert('Missing Info', 'Please enter your Student ID.');
+  // 🔹 Login handler (voter only)
+  const login = async () => {
+    if (!regnumber.trim()) {
+      Alert.alert('Missing Info', 'Please enter your regnumber.');
       return;
     }
 
@@ -61,39 +50,16 @@ export default function LoginScreen() {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({ studentId }),
+        body: JSON.stringify({ regnumber }), // voter login
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Invalid credentials or unauthorized.');
-      }
+      if (!response.ok) throw new Error(data.message || 'Login failed');
 
-      if (data.token) {
-        await saveToken(data.token);
-      }
+      if (data.token) await saveToken(data.token);
 
-      Alert.alert('Login Successful', `Welcome, ${data?.user?.name || studentId}`);
-
-      // ✅ Example protected request using token
-      const token = await getToken();
-      if (token) {
-        const protectedResponse = await fetch(`${API_BASE_URL}/api/categories`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`, // ✅ token attached correctly
-          },
-        });
-
-        if (!protectedResponse.ok) {
-          console.warn('Protected route failed:', protectedResponse.status);
-        } else {
-          console.log('Protected route success ✅');
-        }
-      }
-
+      Alert.alert('Login Successful', `Welcome, ${data?.regnumber || regnumber}`);
       router.push('/home');
     } catch (error: any) {
       console.error('Login error:', error);
@@ -103,10 +69,10 @@ export default function LoginScreen() {
     }
   };
 
-  // 🔹 Fingerprint Login Handler
+  // 🔹 Fingerprint login (voter only)
   const handleFingerprintLogin = async () => {
-    if (!studentId.trim()) {
-      Alert.alert('Missing Info', 'Please enter your Student ID first.');
+    if (!regnumber.trim()) {
+      Alert.alert('Missing Info', 'Please enter your regnumber first.');
       return;
     }
 
@@ -125,45 +91,14 @@ export default function LoginScreen() {
         promptMessage: 'Authenticate to access voting system',
       });
 
-      if (result.success) {
-        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-          method: 'POST',
-          mode: 'cors',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify({ studentId }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Fingerprint login failed.');
-        }
-
-        if (data.token) {
-          await saveToken(data.token);
-        }
-
-        // ✅ Use token for protected call after biometric login
-        const token = await getToken();
-        if (token) {
-          await fetch(`${API_BASE_URL}/api/categories`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-               body: JSON.stringify({ studentId }),
-            },
-          });
-        }
-
-        Alert.alert('Login Successful', `Welcome, ${data?.user?.name || studentId}`);
-        router.push('/home');
-      } else {
+      if (!result.success) {
         Alert.alert('Authentication Failed', 'Fingerprint did not match.');
+        setLoading(false);
+        return;
       }
+
+      // After successful biometric auth, perform voter login
+      await login();
     } catch (error: any) {
       console.error('Fingerprint login error:', error);
       Alert.alert('Error', error.message || 'An unexpected error occurred.');
@@ -187,15 +122,15 @@ export default function LoginScreen() {
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="Enter Student ID"
+            placeholder="Enter Regnumber"
             placeholderTextColor="#807878ff"
-            value={studentId}
-            onChangeText={setStudentId}
+            value={regnumber}
+            onChangeText={setRegnumber}
           />
 
           <TouchableOpacity
             style={[styles.button, styles.manualButton]}
-            onPress={handleManualLogin}
+            onPress={login}
             disabled={loading}
           >
             {loading ? (
@@ -233,13 +168,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8faff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
+  container: { flex: 1, backgroundColor: '#f8faff', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   content: { width: '100%', alignItems: 'center' },
   logoContainer: { alignItems: 'center', marginBottom: 40 },
   title: { fontSize: 28, fontWeight: '700', color: '#00aa55' },
