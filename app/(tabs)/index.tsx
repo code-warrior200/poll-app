@@ -8,8 +8,7 @@ import {
   ActivityIndicator, 
   View, 
   KeyboardAvoidingView,
-  Platform,
-  Image
+  Platform
 } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { ThemedView } from '@/components/themed-view';

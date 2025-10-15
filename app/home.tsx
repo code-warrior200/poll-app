@@ -58,25 +58,6 @@ const mockData = [
     ],
   },
   {
-    position: 'Public Relations Officer',
-    candidates: [
-      { id: '9', name: 'Uche Nnamdi', dept: 'Marketing', image: 'https://randomuser.me/api/portraits/men/9.jpg' },
-      { id: '10', name: 'Sade Adamu', dept: 'Mass Communication', image: 'https://randomuser.me/api/portraits/women/10.jpg' },
-      { id: '25', name: 'Bashir Mohammed', dept: 'Media Studies', image: 'https://randomuser.me/api/portraits/men/25.jpg' },
-      { id: '26', name: 'Titi Ogunleye', dept: 'English', image: 'https://randomuser.me/api/portraits/women/26.jpg' },
-      { id: '29', name: 'Peter Ibeh', dept: 'Advertising', image: 'https://randomuser.me/api/portraits/men/29.jpg' },
-    ],
-  },
-  {
-    position: 'Welfare Director',
-    candidates: [
-      { id: '11', name: 'Bayo Femi', dept: 'Sociology', image: 'https://randomuser.me/api/portraits/men/11.jpg' },
-      { id: '12', name: 'Ngozi Ike', dept: 'Psychology', image: 'https://randomuser.me/api/portraits/women/12.jpg' },
-       { id: '18', name: 'Maryam Abdullahi', dept: 'Linguistics', image: 'https://randomuser.me/api/portraits/women/18.jpg' },
-      { id: '19', name: 'Ibrahim Musa', dept: 'Geography', image: 'https://randomuser.me/api/portraits/men/19.jpg' },
-    ],
-  },
-  {
     position: 'Sports Director',
     candidates: [
       { id: '13', name: 'Ifeanyi Chukwu', dept: 'Human Kinetics', image: 'https://randomuser.me/api/portraits/men/13.jpg' },
