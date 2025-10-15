@@ -1,16 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Alert, 
-  TextInput, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  View, 
+import {
+  StyleSheet,
+  Alert,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  View,
   KeyboardAvoidingView,
-  Platform
+  Platform,
 } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { useRouter } from 'expo-router';
@@ -21,10 +22,91 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // ✅ Detect environment (local vs. production)
+  const API_BASE_URL =
+    process.env.EXPO_PUBLIC_API_URL || 'https://fue-vote-backend-1.onrender.com';
+
+  // ✅ Securely store token
+  const saveToken = async (token: string) => {
+    try {
+      await SecureStore.setItemAsync('jwt_token', token);
+    } catch (error) {
+      console.error('Error saving token:', error);
+    }
+  };
+
+  // ✅ Retrieve stored token
+  const getToken = async () => {
+    try {
+      return await SecureStore.getItemAsync('jwt_token');
+    } catch (error) {
+      console.error('Error retrieving token:', error);
+      return null;
+    }
+  };
+
+  // 🔹 Manual Login Handler
+  const handleManualLogin = async () => {
+    if (!studentId.trim()) {
+      Alert.alert('Missing Info', 'Please enter your Student ID.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ studentId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Invalid credentials or unauthorized.');
+      }
+
+      if (data.token) {
+        await saveToken(data.token);
+      }
+
+      Alert.alert('Login Successful', `Welcome, ${data?.user?.name || studentId}`);
+
+      // ✅ Example protected request using token
+      const token = await getToken();
+      if (token) {
+        const protectedResponse = await fetch(`${API_BASE_URL}/api/categories`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`, // ✅ token attached correctly
+          },
+        });
+
+        if (!protectedResponse.ok) {
+          console.warn('Protected route failed:', protectedResponse.status);
+        } else {
+          console.log('Protected route success ✅');
+        }
+      }
+
+      router.push('/home');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      Alert.alert('Error', error.message || 'Unable to login. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 🔹 Fingerprint Login Handler
   const handleFingerprintLogin = async () => {
     if (!studentId.trim()) {
-      Alert.alert('Missing Info', 'Please enter your Student ID.');
+      Alert.alert('Missing Info', 'Please enter your Student ID first.');
       return;
     }
 
@@ -34,7 +116,7 @@ export default function LoginScreen() {
       const enrolled = await LocalAuthentication.isEnrolledAsync();
 
       if (!compatible || !enrolled) {
-        Alert.alert('Unavailable', 'Fingerprint authentication not available on this device.');
+        Alert.alert('Unavailable', 'Fingerprint authentication not available.');
         setLoading(false);
         return;
       }
@@ -44,26 +126,50 @@ export default function LoginScreen() {
       });
 
       if (result.success) {
-        Alert.alert('Login Successful', `Welcome, ${studentId}`);
+        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+          method: 'POST',
+          mode: 'cors',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ studentId }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Fingerprint login failed.');
+        }
+
+        if (data.token) {
+          await saveToken(data.token);
+        }
+
+        // ✅ Use token for protected call after biometric login
+        const token = await getToken();
+        if (token) {
+          await fetch(`${API_BASE_URL}/api/categories`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+               body: JSON.stringify({ studentId }),
+            },
+          });
+        }
+
+        Alert.alert('Login Successful', `Welcome, ${data?.user?.name || studentId}`);
         router.push('/home');
       } else {
         Alert.alert('Authentication Failed', 'Fingerprint did not match.');
       }
-    } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred.');
+    } catch (error: any) {
+      console.error('Fingerprint login error:', error);
+      Alert.alert('Error', error.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
-  };
-
-  // 🔹 Manual Login Handler
-  const handleManualLogin = () => {
-    if (!studentId.trim()) {
-      Alert.alert('Missing Info', 'Please enter your Student ID.');
-      return;
-    }
-    Alert.alert('Login Successful', `Welcome, ${studentId}`);
-    router.push('/home');
   };
 
   return (
@@ -72,18 +178,12 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.content}
       >
-        {/* 🔹 Logo + Title Section */}
         <View style={styles.logoContainer}>
-          {/* <Image 
-            source={{ uri: 'https://cdn-icons-png.flaticon.com/512/8371/8371769.png' }} 
-            style={styles.logo}
-          /> */}
           <ThemedText type="title" style={styles.title}>
             FUEZ Smart Voting
           </ThemedText>
         </View>
 
-        {/* 🔹 Login Form */}
         <View style={styles.form}>
           <TextInput
             style={styles.input}
@@ -93,7 +193,6 @@ export default function LoginScreen() {
             onChangeText={setStudentId}
           />
 
-          {/* 🔸 Manual Login Button */}
           <TouchableOpacity
             style={[styles.button, styles.manualButton]}
             onPress={handleManualLogin}
@@ -109,7 +208,6 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* 🔸 Biometric Login Button */}
           <TouchableOpacity
             style={[styles.button, styles.fingerprintButton]}
             onPress={handleFingerprintLogin}
@@ -126,7 +224,6 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 🔹 Footer */}
         <ThemedText style={styles.footerText}>
           © {new Date().getFullYear()} FUEZ Student Election
         </ThemedText>
@@ -143,34 +240,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
-  content: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    alignItems: 'center',
-    color: '#00aa55',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#555',
-    marginTop: 4,
-  },
-  form: {
-    width: '100%',
-    gap: 14,
-  },
+  content: { width: '100%', alignItems: 'center' },
+  logoContainer: { alignItems: 'center', marginBottom: 40 },
+  title: { fontSize: 28, fontWeight: '700', color: '#00aa55' },
+  form: { width: '100%', gap: 14 },
   input: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -192,27 +265,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 6,
   },
-  manualButton: {
-    backgroundColor: '#00aa55',
-    shadowColor: '#fff',
-  },
-  fingerprintButton: {
-    backgroundColor: '#00aa55',
-    shadowColor: '#ffF',
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  footerText: {
-    marginTop: 40,
-    color: '#777',
-    fontSize: 12,
-  },
+  manualButton: { backgroundColor: '#00aa55', shadowColor: '#fff' },
+  fingerprintButton: { backgroundColor: '#00aa55', shadowColor: '#fff' },
+  buttonContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  footerText: { marginTop: 40, color: '#777', fontSize: 12 },
 });
