@@ -1,5 +1,5 @@
 // app/vote.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,57 +16,11 @@ import { ThemedView } from '@/components/themed-view';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
-// 🗳️ Extended Dummy Data (with 20+ candidates)
-const mockData = [
-  {
-    position: 'President',
-    candidates: [
-      { id: '1', name: 'John Doe', dept: 'Computer Science', image: 'https://randomuser.me/api/portraits/men/1.jpg' },
-      { id: '2', name: 'Aisha Bello', dept: 'Business Admin', image: 'https://randomuser.me/api/portraits/women/2.jpg' },
-      { id: '27', name: 'Chike Nwankwo', dept: 'Linguistics', image: 'https://randomuser.me/api/portraits/men/27.jpg' },
-      { id: '28', name: 'Amina Sule', dept: 'Public Relations', image: 'https://randomuser.me/api/portraits/women/28.jpg' },
-    ],
-  },
-  {
-    position: 'Vice President',
-    candidates: [
-      { id: '3', name: 'Michael Okoro', dept: 'Engineering', image: 'https://randomuser.me/api/portraits/men/3.jpg' },
-      { id: '4', name: 'Chiamaka Uche', dept: 'Mass Communication', image: 'https://randomuser.me/api/portraits/women/4.jpg' },
-      { id: '23', name: 'Zainab Hassan', dept: 'Econometrics', image: 'https://randomuser.me/api/portraits/women/23.jpg' },
-      { id: '24', name: 'Taiwo Fagbo', dept: 'Accounting', image: 'https://randomuser.me/api/portraits/men/24.jpg' },
-    ],
-  },
-  {
-    position: 'Secretary General',
-    candidates: [
-      { id: '5', name: 'Tolu Ade', dept: 'Political Science', image: 'https://randomuser.me/api/portraits/men/5.jpg' },
-      { id: '6', name: 'Grace Yusuf', dept: 'Accounting', image: 'https://randomuser.me/api/portraits/women/6.jpg' },
-      { id: '15', name: 'Samuel Adegoke', dept: 'History', image: 'https://randomuser.me/api/portraits/men/15.jpg' },
-      { id: '16', name: 'Blessing Olatunji', dept: 'Public Admin', image: 'https://randomuser.me/api/portraits/women/16.jpg' },
-      { id: '17', name: 'Kingsley Nwosu', dept: 'Philosophy', image: 'https://randomuser.me/api/portraits/men/17.jpg' },
-    ],
-  },
-  {
-    position: 'Financial Secretary',
-    candidates: [
-      { id: '7', name: 'Emeka Ojo', dept: 'Economics', image: 'https://randomuser.me/api/portraits/men/7.jpg' },
-      { id: '8', name: 'Hauwa Ali', dept: 'Mathematics', image: 'https://randomuser.me/api/portraits/women/8.jpg' },
-      { id: '20', name: 'David Umeh', dept: 'Finance', image: 'https://randomuser.me/api/portraits/men/20.jpg' },
-      { id: '21', name: 'Rita Eze', dept: 'Banking & Finance', image: 'https://randomuser.me/api/portraits/women/21.jpg' },
-      { id: '22', name: 'Olumide Balogun', dept: 'Business Management', image: 'https://randomuser.me/api/portraits/men/22.jpg' },
-    ],
-  },
-  {
-    position: 'Sports Director',
-    candidates: [
-      { id: '13', name: 'Ifeanyi Chukwu', dept: 'Human Kinetics', image: 'https://randomuser.me/api/portraits/men/13.jpg' },
-      { id: '14', name: 'Amina Lawal', dept: 'Physical Education', image: 'https://randomuser.me/api/portraits/women/14.jpg' },
-    ],
-  },
-];
-
 export default function VoteScreen() {
+  const [candidatesData, setCandidatesData] = useState<any[]>([]); // 🆕 stores fetched candidates
+  const [loading, setLoading] = useState(true); // 🆕 for loading state
+  const [error, setError] = useState<string | null>(null); // 🆕 for API errors
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedVotes, setSelectedVotes] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,13 +28,85 @@ export default function VoteScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [showSummary, setShowSummary] = useState(false);
 
-  const totalCategories = mockData.length;
-  const isLastCategory = currentIndex === totalCategories - 1;
-  const currentCategory = mockData[currentIndex];
+  // 🆕 Fetch candidates from backend
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        const response = await fetch('https://fue-vote-backend-1.onrender.com/candidates');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch: ${response.status}`);
+        }
 
+        const data = await response.json();
+
+        /**
+         * ✅ Assuming API returns a flat list like:
+         * [
+         *   { id, name, dept, image, position },
+         *   ...
+         * ]
+         *
+         * We'll group them by position for your existing structure.
+         */
+        const grouped = Object.values(
+          data.reduce((acc: any, candidate: any) => {
+            if (!acc[candidate.position]) {
+              acc[candidate.position] = { position: candidate.position, candidates: [] };
+            }
+            acc[candidate.position].candidates.push(candidate);
+            return acc;
+          }, {})
+        );
+
+        setCandidatesData(grouped);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCandidates();
+  }, []);
+
+  // 🧭 Derived values
+  const totalCategories = candidatesData.length;
+  const isLastCategory = currentIndex === totalCategories - 1;
+  const currentCategory = candidatesData[currentIndex];
+
+  // 🕓 Loading / Error states
+  if (loading) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ActivityIndicator size="large" color="#00aa55" />
+        <ThemedText style={{ marginTop: 10 }}>Loading candidates...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemedView style={styles.centered}>
+        <Ionicons name="alert-circle" size={50} color="red" />
+        <ThemedText style={{ marginTop: 10, color: 'red' }}>
+          Failed to load candidates: {error}
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (candidatesData.length === 0) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ThemedText>No candidates found.</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  // ✅ Existing functions kept as-is
   const handleVote = () => {
     if (!selectedVotes[currentCategory.position]) return;
-
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
@@ -97,24 +123,16 @@ export default function VoteScreen() {
     }, 1000);
   };
 
-    const handleLogout = async () => {
+  const handleLogout = async () => {
     try {
-      // 🧹 Clear all saved user data
       await AsyncStorage.clear();
-
-      // 🧼 Reset local state
       setSelectedVotes({});
       setShowCheck(false);
-
-      // 🚪 Navigate to login or home screen
       router.replace('/');
-
     } catch (error) {
       console.error('Error logging out:', error);
     }
   };
-
-
 
   const handleSelect = (id: string) => {
     setSelectedVotes((prev) => ({
@@ -132,13 +150,16 @@ export default function VoteScreen() {
     }, 1500);
   };
 
+  // 🧾 Summary view (unchanged)
   if (showSummary) {
     return (
       <ThemedView style={styles.container}>
         <ThemedText type="title" style={styles.header}>Voting Summary</ThemedText>
         <ScrollView showsVerticalScrollIndicator={false}>
-          {mockData.map((category) => {
-            const candidate = category.candidates.find((c) => c.id === selectedVotes[category.position]);
+          {candidatesData.map((category) => {
+            const candidate = category.candidates.find(
+              (c: any) => c.id === selectedVotes[category.position]
+            );
             return (
               <View key={category.position} style={styles.summaryCard}>
                 <ThemedText style={styles.positionText}>{category.position}</ThemedText>
@@ -163,25 +184,28 @@ export default function VoteScreen() {
           onPress={handleFinalSubmit}
           disabled={isSubmitting}
         >
-          {isSubmitting ? <ActivityIndicator size="small" color="#fff" /> : <ThemedText style={styles.voteText}>Submit All Votes</ThemedText>}
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <ThemedText style={styles.voteText}>Submit All Votes</ThemedText>
+          )}
         </TouchableOpacity>
 
         {showCheck && (
           <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
             <Ionicons name="checkmark-circle" size={90} color="#00aa55" />
             <ThemedText style={styles.successText}>All Votes Submitted!</ThemedText>
-
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={20} color="#fff" style={{ marginRight: 6 }} />
               <ThemedText style={styles.logoutText}>Logout</ThemedText>
             </TouchableOpacity>
           </Animated.View>
         )}
-
       </ThemedView>
     );
   }
 
+  // 🧍 Candidate render (unchanged)
   const renderCandidate = ({ item }: { item: any }) => {
     const selected = selectedVotes[currentCategory.position] === item.id;
     return (
@@ -201,24 +225,28 @@ export default function VoteScreen() {
     );
   };
 
+  // 🗳️ Main voting screen
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.header}>{currentCategory.position}</ThemedText>
-       <View style={styles.progressContainer}>
+      <View style={styles.progressContainer}>
         <ThemedText style={styles.progressText}>
           {currentIndex + 1} of {totalCategories} positions
         </ThemedText>
       </View>
       <FlatList
         data={currentCategory.candidates}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderCandidate}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       />
 
       <TouchableOpacity
-        style={[styles.voteButton, (!selectedVotes[currentCategory.position] || isSubmitting) && { backgroundColor: '#ccc' }]}
+        style={[
+          styles.voteButton,
+          (!selectedVotes[currentCategory.position] || isSubmitting) && { backgroundColor: '#ccc' },
+        ]}
         disabled={!selectedVotes[currentCategory.position] || isSubmitting}
         onPress={handleVote}
       >
@@ -241,11 +269,16 @@ export default function VoteScreen() {
   );
 }
 
+// 🧩 Styles (same)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafc', padding: 20 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   progressContainer: { alignItems: 'center', marginBottom: 6 },
   progressText: { fontSize: 14, color: '#666' },
-  header: { textAlign: 'center', fontSize: 24, fontWeight: '700', marginBottom: 10, marginTop:46, color: '#1a1a1a' },
+  header: {
+    textAlign: 'center', fontSize: 24, fontWeight: '700',
+    marginBottom: 10, marginTop: 46, color: '#1a1a1a'
+  },
   card: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
     borderRadius: 16, padding: 14, marginVertical: 8, elevation: 2,
@@ -280,19 +313,14 @@ const styles = StyleSheet.create({
   positionText: { fontSize: 16, fontWeight: '700', color: '#00aa55' },
   summaryAvatar: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
   logoutButton: {
-  flexDirection: 'row',
-  backgroundColor: '#00aa55',
-  paddingVertical: 12,
-  paddingHorizontal: 24,
-  borderRadius: 10,
-  marginTop: 20,
-  alignItems: 'center',
-  justifyContent: 'center',
+    flexDirection: 'row',
+    backgroundColor: '#00aa55',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    marginTop: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  logoutText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
+  logoutText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

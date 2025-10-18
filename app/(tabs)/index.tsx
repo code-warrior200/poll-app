@@ -43,7 +43,7 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/voter-login`, {
         method: 'POST',
         mode: 'cors',
         headers: {
