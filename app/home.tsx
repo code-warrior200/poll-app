@@ -32,7 +32,7 @@ export default function VoteScreen() {
   useEffect(() => {
     const fetchCandidates = async () => {
       try {
-        const response = await fetch('https://fue-vote-backend-1.onrender.com/candidates');
+        const response = await fetch('https://fue-vote-backend-1.onrender.com/api/candidates');
         if (!response.ok) {
           throw new Error(`Failed to fetch: ${response.status}`);
         }
