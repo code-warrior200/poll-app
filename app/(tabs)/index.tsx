@@ -159,12 +159,18 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
+        <ThemedText style={styles.noteText}>
+          Note! ensure you select carefully and vote your choice candidates for the election,
+          all voters are only allowed to vote once. 
+        </ThemedText>    
+
         <ThemedText style={styles.footerText}>
           © {new Date().getFullYear()} FUEZ Student Election
         </ThemedText>
+
       </KeyboardAvoidingView>
     </ThemedView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -199,4 +205,5 @@ const styles = StyleSheet.create({
   buttonContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   footerText: { marginTop: 40, color: '#777', fontSize: 12 },
+  noteText: {marginTop:30,color:'#e60a0aff', fontSize:14, padding:15,},
 });
