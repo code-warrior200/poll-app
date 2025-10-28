@@ -30,6 +30,10 @@ export default function VoteScreen() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
+  // 🧾 New: states for summary
+  const [voteSummary, setVoteSummary] = useState<any[]>([]);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+
   // 🧭 Fetch candidates
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -58,6 +62,26 @@ export default function VoteScreen() {
     };
     fetchCandidates();
   }, []);
+
+// 🧾 New: Fetch vote summary from backend
+const fetchVoteSummary = async () => {
+  try {
+    setLoadingSummary(true);
+    const response = await fetch('https://fue-vote-backend-1.onrender.com/api/vote/votes/summary');
+    if (!response.ok) throw new Error(`Failed to fetch summary: ${response.status}`);
+
+    const data = await response.json();
+
+    console.log('🗳️ Vote Summary Response:', JSON.stringify(data, null, 2)); // ✅ log summary cleanly
+
+    setVoteSummary(data);
+  } catch (err: any) {
+    console.error('Error fetching vote summary:', err);
+    Alert.alert('Error', 'Could not load vote summary.');
+  } finally {
+    setLoadingSummary(false);
+  }
+};
 
   const totalCategories = candidatesData.length;
   const currentCategory = candidatesData[currentIndex];
@@ -98,52 +122,55 @@ export default function VoteScreen() {
     });
   };
 
-const handleVote = async () => {
-  const position = currentCategory.position;
-  const candidateId = selectedVotes[position];
-  if (!candidateId) return;
+  const handleVote = async () => {
+    const position = currentCategory.position;
+    const candidateId = selectedVotes[position];
+    if (!candidateId) return;
 
-  try {
-    setIsSubmitting(true);
-    const response = await sendVoteRequest({ position, candidateId });
-    const text = await response.text();
+    try {
+      setIsSubmitting(true);
+      const response = await sendVoteRequest({ position, candidateId });
+      const text = await response.text();
 
-    if (!response.ok) {
-      if (text.includes('already voted')) {
-        // Skip to next position if already voted
-        if (currentIndex === totalCategories - 1) {
-          setShowSummary(true);
+      if (!response.ok) {
+        if (text.includes('already voted')) {
+          // Skip to next position if already voted
+          if (currentIndex === totalCategories - 1) {
+            setShowSummary(true);
+            fetchVoteSummary(); // ✅ fetch summary when done
+          } else {
+            setCurrentIndex(currentIndex + 1);
+          }
+          return;
         } else {
-          setCurrentIndex(currentIndex + 1);
+          Alert.alert('Error', text || 'Vote failed.');
+          return;
         }
-        return;
-      } else {
-        Alert.alert('Error', text || 'Vote failed.');
-        return;
       }
+
+      // Success animation
+      setShowCheck(true);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start(() => {
+        setTimeout(() => {
+          Animated.timing(fadeAnim, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
+            setShowCheck(false);
+            if (currentIndex === totalCategories - 1) {
+              setShowSummary(true);
+              fetchVoteSummary(); // ✅ fetch summary
+            } else {
+              setCurrentIndex(currentIndex + 1);
+            }
+          });
+        }, 1200);
+      });
+
+    } catch (err) {
+      console.error('Vote submission error:', err);
+      Alert.alert('Error', 'Could not submit vote. Try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Success: show check animation and move to next position
-    setShowCheck(true);
-    Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start(() => {
-      setTimeout(() => {
-        Animated.timing(fadeAnim, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
-          setShowCheck(false);
-          if (currentIndex === totalCategories - 1) setShowSummary(true);
-          else setCurrentIndex(currentIndex + 1);
-        });
-      }, 1200);
-    });
-
-  } catch (err) {
-    console.error('Vote submission error:', err);
-    Alert.alert('Error', 'Could not submit vote. Try again.');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-
+  };
 
   const handleBiometricVote = async () => {
     try {
@@ -177,30 +204,33 @@ const handleVote = async () => {
         <ThemedText type="title" style={styles.header}>
           Voting Summary
         </ThemedText>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {candidatesData.map((category) => {
-            const candidate = category.candidates.find(
-              (c: any) => c.id === selectedVotes[category.position]
-            );
-            return (
+
+        {loadingSummary ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color="#00aa55" />
+            <ThemedText style={{ marginTop: 10 }}>Loading vote summary...</ThemedText>
+          </View>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {voteSummary.map((category: any) => (
               <View key={category.position} style={styles.summaryCard}>
                 <ThemedText style={styles.positionText}>{category.position}</ThemedText>
-                {candidate ? (
-                  <View style={styles.summaryRow}>
+                {category.candidates.map((candidate: any) => (
+                  <View key={candidate.id} style={styles.summaryRow}>
                     <Image source={{ uri: candidate.image }} style={styles.summaryAvatar} />
                     <View style={{ flex: 1 }}>
                       <ThemedText style={styles.name}>{candidate.name}</ThemedText>
                       <ThemedText style={styles.dept}>{candidate.dept}</ThemedText>
-                      <ThemedText style={styles.voteCount}>Total Votes: {candidate.totalVotes || 0}</ThemedText>
+                      <ThemedText style={styles.voteCount}>
+                        Total Votes: {candidate.totalVotes || 0}
+                      </ThemedText>
                     </View>
                   </View>
-                ) : (
-                  <ThemedText style={{ color: '#999', marginTop: 8 }}>No candidate selected</ThemedText>
-                )}
+                ))}
               </View>
-            );
-          })}
-        </ScrollView>
+            ))}
+          </ScrollView>
+        )}
 
         <TouchableOpacity
           style={[styles.voteButton, { backgroundColor: '#00aa55' }]}
@@ -276,7 +306,10 @@ const handleVote = async () => {
       </View>
 
       <TouchableOpacity
-        style={[styles.voteButton, (!selectedVotes[currentCategory.position] || isSubmitting) && { backgroundColor: '#ccc' }]}
+        style={[
+          styles.voteButton,
+          (!selectedVotes[currentCategory.position] || isSubmitting) && { backgroundColor: '#ccc' },
+        ]}
         disabled={!selectedVotes[currentCategory.position] || isSubmitting}
         onPress={handleBiometricVote}
       >
@@ -306,7 +339,7 @@ const handleVote = async () => {
   );
 }
 
-// 🎨 Styles
+// 🎨 Styles (same as your version)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafc', padding: 20 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
